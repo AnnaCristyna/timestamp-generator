@@ -185,14 +185,11 @@ function removeFile(index) {
 // Configurar drag and drop
 function setupDragAndDrop() {
   const items = fileListDiv.querySelectorAll('.file-list-item');
-  let draggedElement = null;
-  let draggedIndex = null;
 
-  items.forEach(item => {
-    item.addEventListener('dragstart', () => {
-      draggedElement = item;
-      draggedIndex = parseInt(item.dataset.index);
+  items.forEach((item) => {
+    item.addEventListener('dragstart', (e) => {
       item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
     });
 
     item.addEventListener('dragend', () => {
@@ -201,41 +198,39 @@ function setupDragAndDrop() {
 
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
-      const afterElement = getDragAfterElement(fileListDiv, e.clientY);
-      if (afterElement == null) {
-        fileListDiv.appendChild(draggedElement);
-      } else {
-        fileListDiv.insertBefore(draggedElement, afterElement);
+      e.dataTransfer.dropEffect = 'move';
+
+      const draggingItem = fileListDiv.querySelector('.dragging');
+      if (!draggingItem) return;
+
+      const currentIndex = Array.from(fileListDiv.children).indexOf(item);
+      const draggingCurrentIndex = Array.from(fileListDiv.children).indexOf(draggingItem);
+
+      if (currentIndex !== draggingCurrentIndex) {
+        if (currentIndex > draggingCurrentIndex) {
+          item.parentNode.insertBefore(draggingItem, item.nextSibling);
+        } else {
+          item.parentNode.insertBefore(draggingItem, item);
+        }
       }
     });
 
     item.addEventListener('drop', (e) => {
       e.preventDefault();
-      const dropIndex = parseInt(item.dataset.index);
+      e.stopPropagation();
 
-      if (draggedIndex !== dropIndex) {
-        // Reordenar array
-        const [removed] = arquivosSelecionados.splice(draggedIndex, 1);
-        arquivosSelecionados.splice(dropIndex, 0, removed);
-        renderFileList(true);
-      }
+      // Pegar a nova ordem dos elementos no DOM
+      const items = Array.from(fileListDiv.querySelectorAll('.file-list-item'));
+      const newOrder = items.map(item => parseInt(item.dataset.index));
+
+      // Reordenar o array baseado na nova ordem visual
+      const reorderedFiles = newOrder.map(i => arquivosSelecionados[i]);
+      arquivosSelecionados.splice(0, arquivosSelecionados.length, ...reorderedFiles);
+
+      // Re-renderizar com os novos índices
+      renderFileList(true);
     });
   });
-}
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.file-list-item:not(.dragging)')];
-
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 // Botões auxiliares para nomes de capítulos
