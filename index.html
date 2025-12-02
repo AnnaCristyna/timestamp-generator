@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de Timestamp para YouTube</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -87,18 +88,26 @@
         <button type="button" class="helper-btn" id="useFileNamesClean" title="Remove extensão, números, underscores e formata">
           🧹 Usar nomes limpos
         </button>
-        <button type="button" class="helper-btn" id="removeExtensions" title="Remove apenas as extensões (.mp3, .wav, etc)">
-          ✂️ Remover extensões
-        </button>
         <button type="button" class="helper-btn" id="addNumbers" title="Adiciona numeração (1., 2., 3...)">
           🔢 Adicionar números
         </button>
         <button type="button" class="helper-btn" id="capitalizeAll" title="Primeira letra maiúscula em cada palavra">
           🔤 Capitalizar
         </button>
-        <button type="button" class="helper-btn" id="clearChapters" title="Limpa todos os nomes">
-          🗑️ Limpar tudo
+        <button type="button" class="helper-btn" id="importTable" title="Importa primeira coluna de arquivo CSV ou Excel">
+          📊 Usar tabela
         </button>
+      </div>
+
+      <input type="file" id="tableFileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+
+      <div id="tableStatus" style="display: none;"></div>
+
+      <div id="tableOptions" style="display: none;">
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="skipHeader">
+          <label for="skipHeader">Ignorar primeira linha (cabeçalho)</label>
+        </div>
       </div>
 
       <textarea id="chapterNames" placeholder="Exemplos:

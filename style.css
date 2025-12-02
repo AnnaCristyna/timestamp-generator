@@ -398,6 +398,89 @@ input[type="number"]:focus {
   transform: translateY(0);
 }
 
+/* Botão de importar tabela - destaque especial */
+#importTable {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  color: white;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+#importTable:hover {
+  background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+}
+
+/* Status da tabela */
+.table-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+  border: 1.5px solid #81e6d9;
+  border-radius: 8px;
+  color: #234e52;
+  font-size: 0.9em;
+  font-weight: 500;
+  margin-bottom: 12px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.table-status-icon {
+  font-size: 1.2em;
+}
+
+.table-status-text {
+  flex: 1;
+}
+
+/* Checkbox customizado */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-wrapper:hover {
+  background: #edf2f7;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4299e1;
+}
+
+.checkbox-wrapper label {
+  cursor: pointer;
+  color: #4a5568;
+  font-size: 0.9em;
+  font-weight: 500;
+  margin: 0;
+  user-select: none;
+}
+
 /* Textarea */
 textarea {
   width: 100%;

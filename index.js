@@ -10,6 +10,7 @@ const chapterCounter = document.getElementById('chapterCounter');
 
 let arquivosSelecionados = [];
 let currentSortType = 'name';
+let currentTableData = null;
 
 const extensoesValidas = ['.wav', '.mp3', '.m4a', '.flac', '.ogg', '.aac'];
 
@@ -32,7 +33,18 @@ function updateChapterCounter() {
 }
 
 // Observar mudanças no textarea
-chapterNamesInput.addEventListener('input', updateChapterCounter);
+chapterNamesInput.addEventListener('input', () => {
+  updateChapterCounter();
+  // Limpar status da tabela se usuário editar manualmente (mas não se estiver vazio)
+  if (currentTableData && chapterNamesInput.value.trim()) {
+    const currentLines = chapterNamesInput.value.trim().split('\n');
+    const tableLines = (skipHeaderCheckbox.checked ? currentTableData.slice(1) : currentTableData);
+    // Se o conteúdo for diferente da tabela carregada, limpar status
+    if (JSON.stringify(currentLines) !== JSON.stringify(tableLines)) {
+      clearTableStatus();
+    }
+  }
+});
 
 fileInput.addEventListener('change', (event) => {
   arquivosSelecionados = Array.from(event.target.files)
@@ -233,12 +245,22 @@ function setupDragAndDrop() {
   });
 }
 
+// Função para limpar status da tabela
+function clearTableStatus() {
+  const tableStatus = document.getElementById('tableStatus');
+  const tableOptions = document.getElementById('tableOptions');
+  if (tableStatus) tableStatus.style.display = 'none';
+  if (tableOptions) tableOptions.style.display = 'none';
+  currentTableData = null;
+}
+
 // Botões auxiliares para nomes de capítulos
 document.getElementById('useFileNames').addEventListener('click', () => {
   if (arquivosSelecionados.length === 0) {
     alert('Selecione arquivos de áudio primeiro.');
     return;
   }
+  clearTableStatus();
   const names = arquivosSelecionados.map(file => file.name);
   chapterNamesInput.value = names.join('\n');
   updateChapterCounter();
@@ -249,6 +271,7 @@ document.getElementById('useFileNamesClean').addEventListener('click', () => {
     alert('Selecione arquivos de áudio primeiro.');
     return;
   }
+  clearTableStatus();
   const names = arquivosSelecionados.map(file => cleanFileName(file.name));
   chapterNamesInput.value = names.join('\n');
   updateChapterCounter();
@@ -270,18 +293,6 @@ document.getElementById('addNumbers').addEventListener('click', () => {
   updateChapterCounter();
 });
 
-document.getElementById('removeExtensions').addEventListener('click', () => {
-  const currentText = chapterNamesInput.value.trim();
-  if (!currentText) {
-    alert('Adicione nomes de capítulos primeiro.');
-    return;
-  }
-  const lines = currentText.split('\n');
-  const cleanedLines = lines.map(line => line.replace(/\.[^.]+$/, ''));
-  chapterNamesInput.value = cleanedLines.join('\n');
-  updateChapterCounter();
-});
-
 document.getElementById('capitalizeAll').addEventListener('click', () => {
   const currentText = chapterNamesInput.value.trim();
   if (!currentText) {
@@ -298,13 +309,136 @@ document.getElementById('capitalizeAll').addEventListener('click', () => {
   updateChapterCounter();
 });
 
-document.getElementById('clearChapters').addEventListener('click', () => {
-  if (chapterNamesInput.value.trim() && !confirm('Tem certeza que deseja limpar todos os nomes?')) {
-    return;
-  }
-  chapterNamesInput.value = '';
-  updateChapterCounter();
+// Importar tabela
+const tableFileInput = document.getElementById('tableFileInput');
+const tableStatus = document.getElementById('tableStatus');
+const tableOptions = document.getElementById('tableOptions');
+const skipHeaderCheckbox = document.getElementById('skipHeader');
+
+document.getElementById('importTable').addEventListener('click', () => {
+  tableFileInput.click();
 });
+
+tableFileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name;
+  const fileNameLower = fileName.toLowerCase();
+  let firstColumn = [];
+
+  try {
+    if (fileNameLower.endsWith('.csv')) {
+      firstColumn = await readCSV(file);
+    } else if (fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls')) {
+      firstColumn = await readExcel(file);
+    } else {
+      alert('Formato não suportado. Use arquivos CSV ou Excel (.xlsx, .xls)');
+      return;
+    }
+
+    if (firstColumn.length === 0) {
+      alert('Nenhum dado encontrado na primeira coluna da tabela.');
+      return;
+    }
+
+    // Armazenar dados
+    currentTableData = firstColumn;
+
+    // Mostrar status de sucesso
+    tableStatus.style.display = 'block';
+    tableStatus.className = 'table-status';
+    tableStatus.innerHTML = `
+      <span class="table-status-icon">✓</span>
+      <span class="table-status-text">Tabela carregada: ${fileName}</span>
+    `;
+
+    // Mostrar opções de cabeçalho
+    tableOptions.style.display = 'block';
+
+    // Aplicar dados ao textarea
+    applyTableData(firstColumn);
+
+    // Atualizar quando checkbox mudar
+    skipHeaderCheckbox.removeEventListener('change', handleCheckboxChange);
+    skipHeaderCheckbox.addEventListener('change', handleCheckboxChange);
+
+  } catch (error) {
+    alert('Erro ao ler arquivo: ' + error.message);
+    console.error(error);
+  }
+
+  // Limpar input para permitir selecionar o mesmo arquivo novamente
+  e.target.value = '';
+});
+
+function handleCheckboxChange() {
+  if (currentTableData) {
+    applyTableData(currentTableData);
+  }
+}
+
+function applyTableData(data) {
+  const skipHeader = skipHeaderCheckbox.checked;
+  const finalData = skipHeader ? data.slice(1) : data;
+  chapterNamesInput.value = finalData.join('\n');
+  updateChapterCounter();
+}
+
+// Função para ler CSV
+function readCSV(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(line => line.trim());
+        const firstColumn = lines.map(line => {
+          // Suporta CSV com vírgula ou ponto-e-vírgula
+          const separator = line.includes(';') ? ';' : ',';
+          const columns = line.split(separator);
+          return columns[0].trim().replace(/^["']|["']$/g, ''); // Remove aspas
+        });
+        resolve(firstColumn);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo CSV'));
+    reader.readAsText(file);
+  });
+}
+
+// Função para ler Excel
+function readExcel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Pegar primeira planilha
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Converter para JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Extrair primeira coluna
+        const firstColumn = jsonData
+          .filter(row => row.length > 0 && row[0] !== null && row[0] !== undefined)
+          .map(row => String(row[0]).trim());
+
+        resolve(firstColumn);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo Excel'));
+    reader.readAsArrayBuffer(file);
+  });
+}
 
 // Função para limpar nomes de arquivos
 function cleanFileName(fileName) {
